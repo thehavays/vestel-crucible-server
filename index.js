@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -267,7 +268,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         output += `State: ${review.state}\n`;
         output += `Author: ${review.author?.displayName}\n`;
         output += `Summary: ${review.summary || ""}\n\n`;
-        output += `## Files output += `## Files & Items\n${itemsInfo || "No items found."}\n\n`; Items\n${itemsInfo || "No items found."}\n\n`;
+        output += `## Files & Items\n${itemsInfo || "No items found."}\n\n`;
         output += `## Comments\n${commentsInfo || "No comments."}\n\n`;
         
         return {
