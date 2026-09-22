@@ -148,6 +148,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["reviewId"],
         },
+      },
+      {
+        name: "crucible_add_comment",
+        description: "Add a review comment or an in-line file comment to an existing Crucible review. Note: All comments are strictly created as drafts (draft: true) for safe review before publishing.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            reviewId: {
+              type: "string",
+              description: "The ID of the review (e.g., 'CR-123' or 'CRU-BUTTERFLY-156')."
+            },
+            message: {
+              type: "string",
+              description: "The text content of the comment."
+            },
+            reviewItemId: {
+              type: "string",
+              description: "Optional PermId of the review item (file) to attach the comment to (e.g., 'CFR-868035'). If omitted, a general review comment is created."
+            },
+            lineRange: {
+              type: "string",
+              description: "Optional line number or range for an in-line comment (e.g. '25662' or '25660-25668'). Applicable when reviewItemId is provided."
+            },
+            revision: {
+              type: "string",
+              description: "Optional commit/file revision string associated with the lineRange (e.g. '49898'). If omitted and lineRange is provided, the latest revision of the review item is automatically resolved."
+            }
+          },
+          required: ["reviewId", "message"],
+        },
       }
     ],
   };
@@ -276,6 +306,80 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: "text",
               text: output,
+            },
+          ],
+        };
+      }
+
+      case "crucible_add_comment": {
+        const reviewId = request.params.arguments?.reviewId;
+        const message = request.params.arguments?.message;
+        const reviewItemId = request.params.arguments?.reviewItemId;
+        const lineRange = request.params.arguments?.lineRange;
+        let revision = request.params.arguments?.revision;
+
+        if (!reviewId || !message) {
+          throw new Error("Both reviewId and message are required.");
+        }
+
+        let response;
+        let commentType = "General Review Comment";
+
+        if (reviewItemId) {
+          commentType = "In-line File Comment";
+          const payload = {
+            message: message,
+            draft: true, // Always created as draft
+          };
+
+          if (lineRange) {
+            if (!revision) {
+              try {
+                const itemsResponse = await api.get(`/reviews-v1/${reviewId}/reviewitems`);
+                const items = itemsResponse.data?.reviewItem || [];
+                const matchedItem = items.find(item => item.permId?.id === reviewItemId);
+                if (matchedItem) {
+                  revision = matchedItem.toRevision || matchedItem.fromRevision || "";
+                }
+              } catch (e) {
+                // If resolving fails, proceed without revision
+              }
+            }
+
+            payload.lineRanges = [
+              {
+                range: String(lineRange),
+                revision: revision ? String(revision) : "",
+              },
+            ];
+          }
+
+          response = await api.post(`/reviews-v1/${reviewId}/reviewitems/${reviewItemId}/comments`, payload);
+        } else {
+          const payload = {
+            message: message,
+            draft: true, // Always created as draft
+          };
+          response = await api.post(`/reviews-v1/${reviewId}/comments`, payload);
+        }
+
+        const commentData = response.data;
+        const commentId = commentData?.permaId?.id || commentData?.permaId || "Unknown";
+
+        let resultText = `Successfully created draft comment on review ${reviewId}.\n`;
+        resultText += `- Comment ID: ${commentId}\n`;
+        resultText += `- Type: ${commentType}\n`;
+        resultText += `- Status: Draft (draft: true - visible only to you until published)\n`;
+        if (reviewItemId) resultText += `- Review Item ID: ${reviewItemId}\n`;
+        if (lineRange) resultText += `- Line Range: ${lineRange}\n`;
+        if (revision) resultText += `- Revision: ${revision}\n`;
+        resultText += `\nMessage:\n${message}\n`;
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: resultText,
             },
           ],
         };

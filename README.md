@@ -69,6 +69,16 @@ Get detailed information about a specific review, including files and patches/di
 Get the unified diff (patch) for a specific file change using its fromContentUrl and toContentUrl.
 - **Inputs:** `fromContentUrl` (string), `toContentUrl` (string)
 
+### `crucible_add_comment`
+Add a review comment or an in-line file comment to an existing Crucible review.
+> **Note:** All comments are strictly created as drafts (`draft: true`) to ensure safe review and verification before publishing.
+- **Inputs:**
+  - `reviewId` (string, required): The ID of the review (e.g. 'CRU-BUTTERFLY-156').
+  - `message` (string, required): The text content of the comment.
+  - `reviewItemId` (string, optional): PermId of the review item/file (e.g. 'CFR-868035'). If omitted, a general review comment is posted.
+  - `lineRange` (string, optional): Line number or line range for an in-line comment (e.g. '25662' or '25660-25668').
+  - `revision` (string, optional): Commit/file revision string associated with the line range. Automatically resolved if omitted.
+
 ---
 
 ## Development & Contribution
