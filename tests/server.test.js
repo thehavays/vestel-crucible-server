@@ -14,5 +14,13 @@ describe('Vestel Crucible MCP Server', () => {
     expect(code).toContain('name: "crucible_get_recent_commits"');
     expect(code).toContain('name: "crucible_get_file_diff"');
     expect(code).toContain('name: "crucible_get_review_details"');
+    expect(code).toContain('name: "crucible_add_comment"');
+  });
+
+  it('should enforce draft: true for comments', () => {
+    const code = fs.readFileSync(path.join(__dirname, "../index.js"), "utf-8");
+    expect(code).toContain("draft: true");
+    // Ensure draft: false is never set
+    expect(code).not.toContain("draft: false");
   });
 });
